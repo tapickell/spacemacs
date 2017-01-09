@@ -319,7 +319,6 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
-  (setq paradox-github-token ab90a4edba48a8be8810b7fd703b8c0a3dfd5512)
   )
 
 (defun dotspacemacs/user-config ()
