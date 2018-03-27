@@ -31,31 +31,45 @@ values."
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
    '(
+     emoji
+     smex
+     elm
+     python
+     sql
      csv
      yaml
-     ruby
+     (ruby :variables
+           ruby-test-runner 'rspec
+           ruby-enable-enh-ruby-mode t)
      emacs-lisp
      erlang
      elixir
+     (typescript :variables
+                 typescript-fmt-on-save t)
      markdown
      html
      colors
      javascript
-     ;; ----------------------------------------------------------------
-     ;; Example of useful layers you may want to use right away.
-     ;; Uncomment some layer names and press <SPC f e R> (Vim style) or
-     ;; <M-m f e R> (Emacs style) to install them.
-     ;; ----------------------------------------------------------------
+     react
      helm
      auto-completion
      ;; better-defaults
      emacs-lisp
      git
-
-     ;; markdown
+     github
+     markdown
      (org :variables
           org-projectile-file "TODOs.org"
           org-enable-github-support t)
+     ;; (org-babel-do-load-languages
+     ;;  'org-babel-load-languages
+     ;;  '((emacs-lisp . t)
+     ;;    (html . t)
+     ;;    (sh . t)
+     ;;    (python . t)
+     ;;    (ruby . t)
+     ;;    (js . t)
+     ;;    (R . t)))
      (shell :variables
             shell-default-height 30
             shell-default-term-shell "/bin/zsh"
@@ -73,6 +87,9 @@ values."
    ;; configuration in `dotspacemacs/user-config'.
    dotspacemacs-additional-packages '(evil-terminal-cursor-changer
                                       mode-icons
+                                      (vue-mode :location (recipe
+                                                           :fetcher github
+                                                           :repo "codefalling/vue-mode"))
                                      )
    ;; A list of packages that cannot be updated.
    dotspacemacs-frozen-packages '()
@@ -150,11 +167,11 @@ values."
    ;; Press <SPC> T n to cycle to the next theme in the list (works great
    ;; with 2 themes variants, one dark and one light)
    dotspacemacs-themes '(
+                         spacemacs-light
                          spacemacs-dark
                          solarized-dark
                          leuven
                          solarized-light
-                         spacemacs-light
                          )
    ;; If non nil the cursor color matches the state color in GUI Emacs.
    dotspacemacs-colorize-cursor-according-to-state t
@@ -334,13 +351,22 @@ you should place your code here."
   (fancy-battery-mode)
   (setq erc-echo-notices-in-minibuffer-flag t)
   ;; use web-mode for .jsx files
-  (add-to-list 'auto-mode-alist '("\\.jsx$" . web-mode))
 
+  (require 'orgtrello)
+  (require 'whitespace)
+  (setq whitespace-style '(face empty tabs lines-tail trailing))
+  (global-whitespace-mode nil)
+
+  (setq org-confirm-babel-evaluate t)
+  (setq evil-insert-state-cursor '("red" box))
+  (setq evil-normal-state-cursor '("green" box))
   ;; http://www.flycheck.org/manual/latest/index.html
   (require 'flycheck)
   (global-flycheck-mode)
-  (setq-default js2-mode-show-parse-errors nil
-                js2-mode-show-strict-warnings nil)
+
+  (load (expand-file-name "~/.quicklisp/slime-helper.el"))
+  (setq inferior-lisp-program "sbcl")
+  (setq slime-contribs '(slime-fancy))
 
   ;; turn on flychecking globally
   (add-hook 'after-init-hook #'global-flycheck-mode)
@@ -359,7 +385,8 @@ you should place your code here."
   ;; disable json-jsonlist checking for json files
   (setq-default flycheck-disabled-checkers
                 (append flycheck-disabled-checkers
-                        '(json-jsonlist)))
+                        '(json-jsonlist)
+                        '(ruby-rubocop)))
 
   ;; adjust indents for web-mode to 2 spaces
   (defun my-web-mode-hook ()
@@ -370,7 +397,77 @@ you should place your code here."
     (setq web-mode-code-indent-offset 2))
   (add-hook 'web-mode-hook  'my-web-mode-hook)
 
+  (defun dotspacemacs/init-vue-mode ()
+    (use-package vue-mode))
+
+  (defun my-flymd-browser-function (url)
+    (let ((process-environment (browse-url-process-environment)))
+      (apply 'start-process
+             (concat "firefox " url)
+             nil
+             "/usr/bin/open"
+             (list "-a" "firefox" url))))
+  (setq flymd-browser-open-function 'my-flymd-browser-function)
+
+  ;; (defun shellhead/smart-org-insert ()
+  ;;   "Creates a new heading if currently in a heading, creates a new list item
+  ;;  if in a list, or creates a newline if neither."
+  ;;   (interactive)
+  ;;   (cond
+  ;;    ((org-at-heading-p) (org-insert-heading-respect-content) (evil-insert-state))
+  ;;    ((org-at-item-p) (org-insert-item))))
+
+  ;; (defun org-tree-open-in-right-frame ()
+  ;;   (interactive)
+  ;;   (org-tree-to-indirect-buffer)
+  ;;   (windmove-right))
+
+  ;; (add-hook 'org-mode-hook
+
+            ;; (lambda ()
+
+              ;; TODO: set fringe/gutter mode and theme by mode, no fringe and white them for ORG files
+              ;; fringe and black theme for code
+              ;; (fringe-mode 0)
+
+              ;; (set-frame-parameter (window-frame) 'background-mode 'dark)
+              ;; (enable-theme 'leuven)
+
+              ;; (visual-fill-column-mode)
+              ;; (define-key evil-normal-state-local-map [S-return] (quote org-tree-open-in-right-frame))
+              ;; (define-key evil-normal-state-local-map [return] (quote org-tree-to-indirect-buffer))
+              ;; (local-set-key [3 25] 'org-copy-subtree)))
+  ;; 24 25 is ctrl-c ctrl-y
+
+  (setq ;; makes killing/yanking interact with the clipboard
+   x-select-enable-clipboard t
+
+   ;; I'm actually not sure what this does but it's recommended?
+   x-select-enable-primary t
+
+   ;; Save clipboard strings into kill ring before replacing them.
+   ;; When one selects something in another program to paste it into Emacs,
+   ;; but kills something in Emacs before actually pasting it,
+   ;; this selection is gone unless this variable is non-nil
+   save-interprogram-paste-before-kill t
+
+   ;; Shows all options when running apropos. For more info,
+   ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Apropos.html
+   apropos-do-all t
+
+   ;; Mouse yank commands yank at point instead of at click.
+   mouse-yank-at-point t)
+
   ;; ELIXIR CONFIG
+  (use-package alchemist
+    :ensure t
+    :init
+    (setq
+     alchemist-mix-command (expand-file-name "~/.asdf/shims/mix")
+     alchemist-iex-program-name (expand-file-name "~/.asdf/shims/iex")
+     alchemist-execute-command (expand-file-name "~/.asdf/shims/elixir")
+     alchemist-compile-command (expand-file-name "~/.asdf/shims/elixirc"))
+    (add-hook 'elixir-mode-hook 'flycheck-mode))
   ;; (add-hook 'alchemist-mode-hook 'company-mode)
   ;; (setq alchemist-goto-elixir-source-dir "/usr/local/lib/elixir-master/lib/elixir/src/")
   ;; (setq alchemist-goto-erlang-source-dir "/usr/local/lib/erlang/lib/")
@@ -382,7 +479,7 @@ you should place your code here."
   ;;        (sit-for 0.01))))
 
   (setq alchemist-key-command-prefix (kbd "C-c ,")) ;; default: (kbd "C-c a")
-
+  ;; (global-set-key (kbd ", v") 'evil-copy-from-above)
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -396,13 +493,21 @@ you should place your code here."
    [default default default italic underline success warning error])
  '(ansi-color-names-vector
    ["#242424" "#e5786d" "#95e454" "#cae682" "#8ac6f2" "#333366" "#ccaa8f" "#f6f3e8"])
+ '(clean-aindent-mode t)
  '(custom-safe-themes
    (quote
     ("bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" default)))
  '(electric-layout-mode t)
  '(evil-want-Y-yank-to-eol nil)
+ '(indent-tabs-mode nil)
+ '(js-indent-level 2)
+ '(neo-auto-indent-point t t)
+ '(package-selected-packages
+   (quote
+    (org-trello common-lisp-snippets evil-lispy list-packages-ext slime smex solidity-mode magit-gh-pulls github-search github-clone magit-popup git-commit ghub vue-mode flymd edit-indirect ssass-mode vue-html-mode yaml-mode web-mode web-beautify tagedit slim-mode scss-mode sass-mode rvm ruby-tools ruby-test-mode rspec-mode robe rbenv rake rainbow-mode rainbow-identifiers pug-mode ox-gfm org-projectile org-present org-pomodoro alert log4e gntp org-download ob-elixir mode-icons minitest livid-mode skewer-mode simple-httpd less-css-mode json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc intero htmlize hlint-refactor hindent helm-hoogle helm-css-scss haskell-snippets haml-mode gnuplot flyspell-correct-helm flyspell-correct flycheck-mix flycheck-haskell flycheck-credo evil-terminal-cursor-changer erlang emmet-mode csv-mode company-web web-completion-data company-tern dash-functional tern company-ghci company-ghc ghc haskell-mode company-cabal color-identifiers-mode coffee-mode cmm-mode chruby bundler inf-ruby auto-dictionary alchemist elixir-mode xterm-color ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline smeargle shell-pop restart-emacs rainbow-delimiters popwin persp-mode pcre2el paradox orgit org-bullets open-junk-file neotree multi-term move-text mmm-mode markdown-toc magit-gitflow macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hungry-delete hl-todo highlight-parentheses highlight-numbers highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make helm-gitignore helm-flx helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md fuzzy flycheck-pos-tip flx-ido fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu eval-sexp-fu eshell-z eshell-prompt-extras esh-help elisp-slime-nav dumb-jump diff-hl define-word company-statistics column-enforce-mode clean-aindent-mode bracketed-paste auto-yasnippet auto-highlight-symbol auto-compile aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line ac-ispell)))
  '(paradox-github-token t)
- '(send-mail-function (quote mailclient-send-it)))
+ '(send-mail-function (quote mailclient-send-it))
+ '(tab-always-indent (quote complete)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
